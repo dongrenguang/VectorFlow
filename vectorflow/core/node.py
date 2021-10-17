@@ -18,7 +18,7 @@ class Node(object):
         self.graph = kargs.get('graph', default_graph)
         self.need_save = kargs.get('need_save', True)
         
-        self.name = self.gen_node_name(**kargs) # 节点名称
+        self.name = self._gen_node_name(**kargs) # 节点名称
         self.parents = list(parents) # 父节点列表
         self.children = [] # 子节点列表
         self.value = None # 本节点的值
@@ -70,10 +70,11 @@ class Node(object):
             return np.mat(np.eye(self.dimension()))
         else:
             self.jacobi = np.mat(
-                np.zeros((result_node.dimension, self.dimension()))
+                np.zeros((result_node.dimension(), self.dimension()))
             )
             for child in self.children:
-                self.jacobi += child.backward() * child.get_jacobi_with_parent(self)
+                if child.value is not None:
+                    self.jacobi += child.backward(result_node) * child.get_jacobi_with_parent(self)
         return self.jacobi
 
     @abc.abstractmethod
@@ -89,12 +90,12 @@ class Node(object):
     def dimension(self):
         """获取本节点的值展开成向量后的维数
         """
-        return self.value.shape()[0] * self.value.shape()[1]
+        return self.value.shape[0] * self.value.shape[1]
     
     def shape(self):
         """获取本节点的值做为矩阵的形状
         """
-        return self.value.shape()
+        return self.value.shape
 
     def _gen_node_name(self, **kargs):
         """生成节点名称

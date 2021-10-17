@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from .basic_func import *
-from .graph import *
-from .name_scope import *
-from .node import *
-from .variable import *
+from . import core
+from . import loss
+from . import operator
+
+default_graph = core.default_graph
