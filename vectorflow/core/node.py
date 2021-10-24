@@ -15,6 +15,7 @@ class Node(object):
     计算图节点基类
     """
     def __init__(self, *parents, **kargs):
+        self.kargs = kargs
         self.graph = kargs.get('graph', default_graph)
         self.need_save = kargs.get('need_save', True)
         

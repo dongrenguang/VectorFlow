@@ -140,8 +140,8 @@ class Reshape(Operator):
     """改变父节点的值（矩阵）的形状
     """
 
-    def __init__(self, *parent, **kargs):
-        Operator.__init__(self, *parent, **kargs)
+    def __init__(self, *parents, **kargs):
+        Operator.__init__(self, *parents, **kargs)
 
         self.to_shape = kargs.get('shape')
         assert isinstance(self.to_shape, tuple) and len(self.to_shape) == 2
