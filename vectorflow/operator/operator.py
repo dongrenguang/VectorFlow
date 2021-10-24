@@ -65,6 +65,18 @@ class MatMul(Operator):
             col_sort = np.arange(parent.dimension()).reshape(parent.shape()[::-1]).T.ravel()
             return jacobi[row_sort, :][:, col_sort]
 
+def fill_diagonal(to_be_filled, filler):
+    """将 filler 矩阵填充在 to_be_filled 的对角线上
+    """
+    assert to_be_filled.shape[0] / filler.shape[0] == to_be_filled.shape[1] / filler.shape[1]
+    n = int(to_be_filled.shape[0] / filler.shape[0])
+
+    r, c = filler.shape
+    for i in range(n):
+        to_be_filled[i * r:(i + 1) * r, i * c:(i + 1) * c] = filler
+
+    return to_be_filled
+
 class Step(Operator):
     """阶跃函数
     """
@@ -124,14 +136,45 @@ class ReLU(Operator):
     def get_jacobi_with_parent(self, parent):
         return np.diag(np.where(self.parents[0].value.A1 > 0.0, 1.0, self.nslope))
 
-def fill_diagonal(to_be_filled, filler):
-    """将 filler 矩阵填充在 to_be_filled 的对角线上
+class Reshape(Operator):
+    """改变父节点的值（矩阵）的形状
     """
-    assert to_be_filled.shape[0] / filler.shape[0] == to_be_filled.shape[1] / filler.shape[1]
-    n = int(to_be_filled.shape[0] / filler.shape[0])
 
-    r, c = filler.shape
-    for i in range(n):
-        to_be_filled[i * r:(i + 1) * r, i * c:(i + 1) * c] = filler
+    def __init__(self, *parent, **kargs):
+        Operator.__init__(self, *parent, **kargs)
 
-    return to_be_filled
+        self.to_shape = kargs.get('shape')
+        assert isinstance(self.to_shape, tuple) and len(self.to_shape) == 2
+
+    def compute(self):
+        self.value = self.parents[0].value.reshape(self.to_shape)
+
+    def get_jacobi_with_parent(self, parent):
+        assert parent is self.parents[0]
+        return np.mat(np.eye(self.dimension()))
+
+class Concat(Operator):
+    """将多个父节点的值连接成向量
+    """
+
+    def compute(self):
+        assert len(self.parents) > 0
+
+        # 将所有父节点矩阵按行展开并连接成一个向量
+        self.value = np.concatenate(
+            [p.value.flatten() for p in self.parents],
+            axis=1
+        ).T
+
+    def get_jacobi_with_parent(self, parent):
+        assert parent in self.parents
+
+        dimensions = [p.dimension() for p in self.parents] # 各个父节点的元素数量
+        pos = self.parents.index(parent) # 当前是第几个父节点
+        dimension = parent.dimension() # 当前父节点的元素数量
+
+        jacobi = np.mat(np.zeros((self.dimension(), dimension)))
+        start_row = int(np.sum(dimensions[:pos]))
+        jacobi[start_row:start_row + dimension, 0:dimension] = np.eye(dimension)
+
+        return jacobi
